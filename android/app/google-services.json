@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1001807286020",
+    "project_id": "massagebookingapp-5a234",
+    "storage_bucket": "massagebookingapp-5a234.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1001807286020:android:ad7b7bff359022baca8a51",
+        "android_client_info": {
+          "package_name": "com.carlo.therapy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDq_dY7T_pnbNDGhvhqaDs9sxcw0zz1CyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1001807286020:android:d0f2fbee6c152755ca8a51",
+        "android_client_info": {
+          "package_name": "com.example.massage_booking_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDq_dY7T_pnbNDGhvhqaDs9sxcw0zz1CyE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
