@@ -6,7 +6,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Massage App')),
+      appBar: AppBar(title: const Text('Main Page')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -19,14 +19,14 @@ class HomePage extends StatelessWidget {
                 },
                 child: const Text('Customer'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 25),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/massager_login');
                 },
                 child: const Text('Massage (Massager login)'),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 25),
               ElevatedButton(
                 onPressed: () {
                   Navigator.pushNamed(context, '/apply');

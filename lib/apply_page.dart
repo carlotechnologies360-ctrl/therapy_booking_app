@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'firebase_service.dart';
+import 'package:therapy_booking_app/local_database.dart';
+import 'firebase_service.dart'; // KEEP this ONLY if needed for anything later
 
 class ApplyPage extends StatefulWidget {
   const ApplyPage({super.key});
@@ -10,7 +11,7 @@ class ApplyPage extends StatefulWidget {
 
 class _ApplyPageState extends State<ApplyPage> {
   final _formKey = GlobalKey<FormState>();
-  final _service = FirebaseService();
+  final _service = FirebaseService(); // Not used for Firestore anymore
 
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
@@ -22,31 +23,39 @@ class _ApplyPageState extends State<ApplyPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _loading = true);
 
     try {
-      await _service.submitApplication(
-        name: _nameCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim(),
-        experience: _experienceCtrl.text.trim(),
-        location: _locationCtrl.text.trim(),
-        notes: _notesCtrl.text.trim(),
-      );
+      // 1️⃣ SAVE APPLICATION TO LOCAL SQLITE DATABASE
+      await LocalDatabase.insert("applications", {
+        "name": _nameCtrl.text.trim(),
+        "phone": _phoneCtrl.text.trim(),
+        "experience": _experienceCtrl.text.trim(),
+        "location": _locationCtrl.text.trim(),
+        "notes": _notesCtrl.text.trim(),
+      });
+
+      // 2️⃣ Show success
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Application submitted')),
+        const SnackBar(content: Text("Application submitted successfully")),
       );
+
+      // 3️⃣ Clear the form
       _formKey.currentState!.reset();
       _nameCtrl.clear();
       _phoneCtrl.clear();
       _experienceCtrl.clear();
       _locationCtrl.clear();
       _notesCtrl.clear();
+
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(content: Text("Error: $e")),
       );
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -75,8 +84,7 @@ class _ApplyPageState extends State<ApplyPage> {
               ),
               TextFormField(
                 controller: _experienceCtrl,
-                decoration:
-                    const InputDecoration(labelText: 'Experience (years)'),
+                decoration: const InputDecoration(labelText: 'Experience (years)'),
               ),
               TextFormField(
                 controller: _locationCtrl,
@@ -85,8 +93,7 @@ class _ApplyPageState extends State<ApplyPage> {
               TextFormField(
                 controller: _notesCtrl,
                 maxLines: 3,
-                decoration:
-                    const InputDecoration(labelText: 'Additional Notes'),
+                decoration: const InputDecoration(labelText: 'Additional Notes'),
               ),
               const SizedBox(height: 24),
               _loading

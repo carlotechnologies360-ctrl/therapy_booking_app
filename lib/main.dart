@@ -9,7 +9,7 @@ import 'apply_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // uses  firebase options
+  await Firebase.initializeApp(); // uneed for firebase auth 
   runApp(const MyApp());
 }
 
