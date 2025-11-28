@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../firebase_service.dart';
+import 'package:therapy_booking_app/local_database.dart';
+
 
 class CustomerSignupPage extends StatefulWidget {
   const CustomerSignupPage({super.key});
@@ -23,7 +25,9 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
+
     try {
+      // 1️⃣ Create account using Firebase Auth
       await _service.signupCustomer(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
@@ -31,11 +35,21 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
         phone: _phoneCtrl.text.trim(),
       );
 
+      // 2️⃣ Save the user in LOCAL SQLite DB
+      await LocalDatabase.insert('customers', {
+        'name': _nameCtrl.text.trim(),
+        'phone': _phoneCtrl.text.trim(),
+        'email': _emailCtrl.text.trim(),
+        'password': _passwordCtrl.text.trim(), // store temporarily
+      });
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Customer registered successfully')),
       );
-      Navigator.pop(context); // go back to login
+
+      Navigator.pop(context); // Go back to login
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
@@ -77,7 +91,8 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 validator: (v) =>
-                    v != null && v.length >= 6 ? null : 'Min 6 chars',
+                     (v?.length ?? 0) >= 6 ? null : 'Min 6 chars',
+
               ),
               const SizedBox(height: 24),
               _loading

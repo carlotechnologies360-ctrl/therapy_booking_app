@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../firebase_service.dart';
+import 'package:therapy_booking_app/local_database.dart';
+
 
 class MassagerLoginPage extends StatefulWidget {
   const MassagerLoginPage({super.key});
@@ -10,7 +11,6 @@ class MassagerLoginPage extends StatefulWidget {
 
 class _MassagerLoginPageState extends State<MassagerLoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _service = FirebaseService();
 
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
@@ -20,19 +20,33 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
+
     try {
-      await _service.loginMassager(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text.trim(),
+      // 🔍 1. Find massager by email in SQLite DB
+      final massager = await LocalDatabase.findByEmail(
+        'massagers',
+        _emailCtrl.text.trim(),
       );
 
+      if (massager == null) {
+        throw "No massager found with this email";
+      }
+
+      // 🔐 2. Check password
+      if (massager['password'] != _passwordCtrl.text.trim()) {
+        throw "Incorrect password";
+      }
+
+      // 🎉 3. Login success
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Massager logged in')),
       );
 
-      // TODO: navigate to massager dashboard
+      // TODO: Navigate to massager dashboard here
+
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login error: $e')),
       );
@@ -73,7 +87,6 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
                     ),
               const SizedBox(height: 16),
 
-              // ADD INFO TEXT
               Text(
                 "Don't have an account?\nPlease apply first. Admin will contact you.",
                 textAlign: TextAlign.center,

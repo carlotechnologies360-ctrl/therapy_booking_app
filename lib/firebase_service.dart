@@ -1,9 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   // ---------- CUSTOMER ----------
 
@@ -13,18 +11,14 @@ class FirebaseService {
     required String name,
     required String phone,
   }) async {
+
+    // Create account (Firebase Authentication)
     final cred = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
-    await _db.collection('customers').doc(cred.user!.uid).set({
-      'name': name,
-      'phone': phone,
-      'email': email,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
+    // No Firestore storage (You will store in SQLite locally)
     return cred.user;
   }
 
@@ -39,21 +33,22 @@ class FirebaseService {
     return cred.user;
   }
 
-  // ---------- MASSAGER ----------
+  // ---------- MASSAGER LOGIN ----------
 
- Future<User?> loginMassager({
-  required String email,
-  required String password,
-}) async {
-  final cred = await _auth.signInWithEmailAndPassword(
-    email: email,
-    password: password,
-  );
-  return cred.user;
-}
-
+  Future<User?> loginMassager({
+    required String email,
+    required String password,
+  }) async {
+    final cred = await _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return cred.user;
+  }
 
   // ---------- APPLY FORM ----------
+  // This will no longer send data to Firestore.
+  // You will later save these details in SQLite.
 
   Future<void> submitApplication({
     required String name,
@@ -62,13 +57,7 @@ class FirebaseService {
     required String location,
     String? notes,
   }) async {
-    await _db.collection('applications').add({
-      'name': name,
-      'phone': phone,
-      'experience': experience,
-      'location': location,
-      'notes': notes ?? '',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    // No Firestore — will use SQLite later
+    return;
   }
 }
