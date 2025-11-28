@@ -6,6 +6,8 @@ import 'customer/customer_login.dart';
 import 'customer/customer_signup.dart';
 import 'massager/massager_login.dart';
 import 'apply_page.dart';
+import 'customer/customer_home_page.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +31,8 @@ class MyApp extends StatelessWidget {
         '/customer_signup': (context) => const CustomerSignupPage(),
         '/massager_login': (context) => const MassagerLoginPage(),
         '/apply': (context) => const ApplyPage(),
+        '/customer_home': (context) => const CustomerHomePage(),
+
       },
     );
   }

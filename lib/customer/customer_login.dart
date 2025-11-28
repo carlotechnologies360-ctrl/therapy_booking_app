@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../firebase_service.dart';
 import 'customer_signup.dart';
+import 'package:therapy_booking_app/customer/enter_code_page.dart';
 
 class CustomerLoginPage extends StatefulWidget {
   const CustomerLoginPage({super.key});
@@ -27,9 +28,11 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
         password: _passwordCtrl.text.trim(),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Customer logged in')),
-      );
+      Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (_) => EnterCodePage()),
+);
+
       // TODO: Navigate to customer dashboard page
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
