@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../local_database.dart';
 import 'massager_details.dart';
+import 'customer_home_page.dart';
+import '../providers/session_provider.dart';
 
 class EnterCodePage extends StatefulWidget {
   const EnterCodePage({super.key});
@@ -13,29 +16,54 @@ class _EnterCodePageState extends State<EnterCodePage> {
   final _codeController = TextEditingController();
   bool _loading = false;
 
+  @override
+  void dispose() {
+    _codeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     setState(() => _loading = true);
 
-    // search in SQLite
-    final result = await LocalDatabase.findByEmail(
-      'massagers',
-      _codeController.text.trim(),
-    );
+    final enteredCode = _codeController.text.trim();
 
-    // wait—findByEmail uses email. We need findByCode instead.
-    // So we will use custom query:
+    // DUMMY CODE FOR TESTING - Replace with real logic later
+    // Dummy therapist codes for quick access to customer dashboard
+    const dummyCodes = ['THERAPIST123', 'TEST123', 'DEMO2024'];
+
+    if (dummyCodes.contains(enteredCode.toUpperCase())) {
+      setState(() => _loading = false);
+      
+      // Store therapist code in session
+      if (!mounted) return;
+      Provider.of<SessionProvider>(context, listen: false)
+          .setTherapistCode(enteredCode.toUpperCase());
+      
+      // Navigate to customer home page (dashboard) with therapist code
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CustomerHomePage(
+            therapistCode: enteredCode.toUpperCase(),
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Try to search in SQLite database (for real therapist codes)
     final db = await LocalDatabase.database;
     final rows = await db.query(
       "massagers",
       where: "code = ?",
-      whereArgs: [_codeController.text.trim()],
+      whereArgs: [enteredCode],
     );
 
     setState(() => _loading = false);
 
     if (rows.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid code. Try again.")),
+        const SnackBar(content: Text("Invalid code. Try again.\nHint: Try THERAPIST123 for demo")),
       );
       return;
     }
@@ -55,16 +83,26 @@ class _EnterCodePageState extends State<EnterCodePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Enter Therapist Code")),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Enter Therapist Code"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
             TextField(
               controller: _codeController,
+              keyboardType: TextInputType.text,
+              textCapitalization: TextCapitalization.characters,
+              enableInteractiveSelection: true,
               decoration: const InputDecoration(
                 labelText: "Therapist Code",
                 hintText: "Enter the code shared by your therapist",
+                border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),

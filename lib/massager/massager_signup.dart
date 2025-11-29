@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import '../firebase_service.dart';
 import 'package:therapy_booking_app/local_database.dart';
 
-class CustomerSignupPage extends StatefulWidget {
-  const CustomerSignupPage({super.key});
+class MassagerSignupPage extends StatefulWidget {
+  const MassagerSignupPage({super.key});
 
   @override
-  State<CustomerSignupPage> createState() => _CustomerSignupPageState();
+  State<MassagerSignupPage> createState() => _MassagerSignupPageState();
 }
 
-class _CustomerSignupPageState extends State<CustomerSignupPage> {
+class _MassagerSignupPageState extends State<MassagerSignupPage> {
   final _formKey = GlobalKey<FormState>();
   final _service = FirebaseService();
 
@@ -27,7 +27,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
 
     try {
       // 1️⃣ Create account using Firebase Auth
-      await _service.signupCustomer(
+      await _service.signupMassager(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text.trim(),
         name: _nameCtrl.text.trim(),
@@ -35,7 +35,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
       );
 
       // 2️⃣ Save the user in LOCAL SQLite DB
-      await LocalDatabase.insert('customers', {
+      await LocalDatabase.insert('massagers', {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
@@ -44,7 +44,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Customer registered successfully')),
+        const SnackBar(content: Text('Therapist registered successfully')),
       );
 
       Navigator.pop(context);
@@ -74,7 +74,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Colors.teal.shade400, Colors.teal.shade800],
+            colors: [Colors.purple.shade400, Colors.purple.shade800],
           ),
         ),
         child: SafeArea(
@@ -94,22 +94,22 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          Icons.person_add_outlined,
+                          Icons.spa_outlined,
                           size: 80,
-                          color: Colors.teal.shade600,
+                          color: Colors.purple.shade600,
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'Create Account',
+                          'Therapist Signup',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Colors.teal.shade800,
+                            color: Colors.purple.shade800,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign up to get started',
+                          'Join as a therapist',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade600,
@@ -130,7 +130,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.teal.shade600, width: 2),
+                              borderSide: BorderSide(color: Colors.purple.shade600, width: 2),
                             ),
                           ),
                           validator: (v) => v == null || v.isEmpty ? 'Required' : null,
@@ -150,7 +150,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.teal.shade600, width: 2),
+                              borderSide: BorderSide(color: Colors.purple.shade600, width: 2),
                             ),
                           ),
                           keyboardType: TextInputType.phone,
@@ -171,7 +171,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.teal.shade600, width: 2),
+                              borderSide: BorderSide(color: Colors.purple.shade600, width: 2),
                             ),
                           ),
                           keyboardType: TextInputType.emailAddress,
@@ -193,7 +193,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.teal.shade600, width: 2),
+                              borderSide: BorderSide(color: Colors.purple.shade600, width: 2),
                             ),
                           ),
                           obscureText: true,
@@ -206,12 +206,12 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                           height: 50,
                           child: _loading
                               ? Center(child: CircularProgressIndicator(
-                                  color: Colors.teal.shade600,
+                                  color: Colors.purple.shade600,
                                 ))
                               : ElevatedButton(
                                   onPressed: _submit,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal.shade600,
+                                    backgroundColor: Colors.purple.shade600,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
@@ -233,7 +233,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                           child: Text(
                             'Already have an account? Login',
                             style: TextStyle(
-                              color: Colors.teal.shade700,
+                              color: Colors.purple.shade700,
                               fontSize: 16,
                             ),
                           ),

@@ -1,10 +1,10 @@
-# therapy_booking_app
+# Service Booking App
 
-A new Flutter project.
+Multi-provider service booking platform connecting service providers and customers (one-to-many model). Provides customer browsing, provider application & approval workflow, code-based secure access, and admin web portal.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+This project was originally scaffolded as `therapy_booking_app` and renamed to `service_booking_app` to reflect broader service booking use cases.
 
 A few resources to get you started if this is your first Flutter project:
 
