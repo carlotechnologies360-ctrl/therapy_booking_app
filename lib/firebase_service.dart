@@ -22,6 +22,19 @@ class FirebaseService {
     return cred.user;
   }
 
+  Future<User?> signupMassager({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+  }) async {
+    final cred = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    return cred.user;
+  }
+
   Future<User?> loginCustomer({
     required String email,
     required String password,
