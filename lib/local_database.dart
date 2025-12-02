@@ -18,7 +18,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 5,   // increase version when schema changes
+      version: 6,   // increase version when schema changes
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -74,6 +74,20 @@ class LocalDatabase {
       // Add setupComplete flag to massagers table
       await db.execute('''
         ALTER TABLE massagers ADD COLUMN setupComplete INTEGER DEFAULT 0
+      ''');
+    }
+    if (oldVersion < 6) {
+      // Create customer visits table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS customer_visits (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          therapistCode TEXT,
+          customerEmail TEXT,
+          customerName TEXT,
+          firstVisit TEXT,
+          lastVisit TEXT,
+          visitCount INTEGER DEFAULT 1
+        )
       ''');
     }
   }
@@ -166,6 +180,18 @@ class LocalDatabase {
         createdAt TEXT
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE customer_visits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        therapistCode TEXT,
+        customerEmail TEXT,
+        customerName TEXT,
+        firstVisit TEXT,
+        lastVisit TEXT,
+        visitCount INTEGER DEFAULT 1
+      )
+    ''');
   }
 
   // Insert data
@@ -219,17 +245,6 @@ class LocalDatabase {
       WHERE therapistCode = ?
     ''', [therapistCode]);
     return result.first['count'] as int;
-  }
-
-  // Update booking status
-  static Future<int> updateBookingStatus(int bookingId, String status) async {
-    final db = await database;
-    return await db.update(
-      'bookings',
-      {'status': status},
-      where: 'id = ?',
-      whereArgs: [bookingId],
-    );
   }
 
   // ===== NOTIFICATIONS METHODS =====
@@ -392,5 +407,88 @@ class LocalDatabase {
     final data = await findByEmail('massagers', providerEmail);
     if (data == null) return false;
     return (data['setupComplete'] as int?) == 1;
+  }
+
+  // Update massager code (sync from Firestore)
+  static Future<int> updateMassagerCode({
+    required String email,
+    required String code,
+  }) async {
+    final db = await database;
+    return await db.update(
+      'massagers',
+      {'code': code},
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+  }
+
+  // Update booking status (approve/reject)
+  static Future<int> updateBookingStatus({
+    required int bookingId,
+    required String status,
+  }) async {
+    final db = await database;
+    return await db.update(
+      'bookings',
+      {'status': status},
+      where: 'id = ?',
+      whereArgs: [bookingId],
+    );
+  }
+
+  // ===== CUSTOMER VISITS METHODS =====
+  
+  // Record customer visit (when they enter therapist code)
+  static Future<void> recordCustomerVisit({
+    required String therapistCode,
+    required String customerEmail,
+    required String customerName,
+  }) async {
+    final db = await database;
+    final now = DateTime.now().toIso8601String();
+    
+    // Check if customer has visited before
+    final existing = await db.query(
+      'customer_visits',
+      where: 'therapistCode = ? AND customerEmail = ?',
+      whereArgs: [therapistCode, customerEmail],
+    );
+    
+    if (existing.isNotEmpty) {
+      // Update existing record
+      final visitCount = (existing.first['visitCount'] as int) + 1;
+      await db.update(
+        'customer_visits',
+        {
+          'lastVisit': now,
+          'visitCount': visitCount,
+        },
+        where: 'therapistCode = ? AND customerEmail = ?',
+        whereArgs: [therapistCode, customerEmail],
+      );
+    } else {
+      // Create new record
+      await db.insert('customer_visits', {
+        'therapistCode': therapistCode,
+        'customerEmail': customerEmail,
+        'customerName': customerName,
+        'firstVisit': now,
+        'lastVisit': now,
+        'visitCount': 1,
+      });
+    }
+  }
+  
+  // Get all customers who visited a therapist
+  static Future<List<Map<String, dynamic>>> getCustomerVisitsByTherapistCode(
+      String therapistCode) async {
+    final db = await database;
+    return await db.query(
+      'customer_visits',
+      where: 'therapistCode = ?',
+      whereArgs: [therapistCode],
+      orderBy: 'lastVisit DESC',
+    );
   }
 }

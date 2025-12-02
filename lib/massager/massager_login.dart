@@ -84,20 +84,37 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
         password: _passwordCtrl.text.trim(),
       );
 
+      final providerEmail = _emailCtrl.text.trim();
+
+      // First check Firestore for application status
+      final firestoreApp = await _service.getApplicationByEmail(providerEmail);
+      
       // Get provider details from local database
       final providerData = await LocalDatabase.findByEmail(
         'massagers',
-        _emailCtrl.text.trim(),
+        providerEmail,
       );
 
       if (providerData == null) {
         throw Exception('Provider account not found');
       }
 
-      final providerCode = providerData['code'] as String?;
       final providerName = providerData['name'] as String? ?? 'Service Provider';
-      final providerEmail = _emailCtrl.text.trim();
+      String? providerCode = providerData['code'] as String?;
       final setupComplete = (providerData['setupComplete'] as int?) == 1;
+
+      // If application is approved in Firestore but local DB doesn't have code, sync it
+      if (firestoreApp != null && 
+          firestoreApp['status'] == 'approved' && 
+          firestoreApp['therapistCode'] != null) {
+        providerCode = firestoreApp['therapistCode'] as String;
+        
+        // Update local database with the code from Firestore
+        await LocalDatabase.updateMassagerCode(
+          email: providerEmail,
+          code: providerCode,
+        );
+      }
 
       await _saveCredentials();
 
@@ -105,6 +122,28 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
 
       // Check provider status and redirect accordingly
       if (providerCode == null || providerCode.isEmpty) {
+        // Check if application is pending or rejected
+        if (firestoreApp != null) {
+          if (firestoreApp['status'] == 'pending') {
+            // Application pending approval
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Your application is pending admin approval'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          } else if (firestoreApp['status'] == 'rejected') {
+            // Application rejected
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Your application was rejected. Please contact admin.'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+        }
         // No code yet - redirect to apply page
         Navigator.pushReplacement(
           context,
@@ -132,7 +171,7 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
           context,
           MaterialPageRoute(
             builder: (_) => MassagerHomePage(
-              therapistCode: providerCode,
+              therapistCode: providerCode!,
               therapistName: providerName,
             ),
           ),
