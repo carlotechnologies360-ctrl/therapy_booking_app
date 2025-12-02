@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/service_model.dart';
 import '../providers/cart_provider.dart';
+import '../local_database.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final String therapistCode;
@@ -22,44 +23,63 @@ class CustomerHomePage extends StatefulWidget {
 }
 
 class _CustomerHomePageState extends State<CustomerHomePage> {
-  // Dummy services - Replace with database query later
-  final List<ServiceModel> _services = [
-    ServiceModel(
-      id: '1',
-      name: 'Swedish Massage',
-      description: 'Relaxing full body massage using gentle strokes',
-      durationMinutes: 60,
-      price: 80.0,
-    ),
-    ServiceModel(
-      id: '2',
-      name: 'Deep Tissue Massage',
-      description: 'Focused pressure on deep muscle layers',
-      durationMinutes: 60,
-      price: 95.0,
-    ),
-    ServiceModel(
-      id: '3',
-      name: 'Sports Massage',
-      description: 'Targeted therapy for athletes and active individuals',
-      durationMinutes: 75,
-      price: 110.0,
-    ),
-    ServiceModel(
-      id: '4',
-      name: 'Hot Stone Therapy',
-      description: 'Heated stones combined with massage techniques',
-      durationMinutes: 90,
-      price: 130.0,
-    ),
-    ServiceModel(
-      id: '5',
-      name: 'Aromatherapy Massage',
-      description: 'Essential oils massage for relaxation and healing',
-      durationMinutes: 60,
-      price: 90.0,
-    ),
-  ];
+  List<ServiceModel> _services = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadServices();
+  }
+
+  Future<void> _loadServices() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // Get therapist email from code
+      final therapistData = await LocalDatabase.findByCode(
+        'massagers',
+        widget.therapistCode,
+      );
+
+      if (therapistData == null) {
+        setState(() {
+          _errorMessage = 'Therapist not found';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final therapistEmail = therapistData['email'] as String;
+
+      // Load services from database
+      final servicesData = await LocalDatabase.getServicesByProvider(therapistEmail);
+
+      final services = servicesData.map((data) {
+        return ServiceModel(
+          id: data['id'].toString(),
+          name: data['serviceName'] as String,
+          description: data['description'] as String? ?? '',
+          durationMinutes: data['durationMinutes'] as int,
+          price: (data['price'] as num).toDouble(),
+        );
+      }).toList();
+
+      setState(() {
+        _services = services;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading services: $e';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -191,8 +211,54 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                 ),
               ),
             ),
-            // Services List
-            ListView.builder(
+            // Loading/Error/Services Content
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(40.0),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(40.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _loadServices,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            else if (_services.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(40.0),
+                child: Column(
+                  children: [
+                    Icon(Icons.spa_outlined, size: 60, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No services available yet',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This therapist hasn\'t added any services',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    ),
+                  ],
+                ),
+              )
+            else
+              // Services List
+              ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16),

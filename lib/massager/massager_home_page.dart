@@ -25,6 +25,7 @@ class _MassagerHomePageState extends State<MassagerHomePage>
   List<BookingModel> _upcomingBookings = [];
   List<BookingModel> _historyBookings = [];
   Map<String, dynamic> _customerStats = {};
+  List<Map<String, dynamic>> _customerVisits = [];
   int _customerCount = 0;
   bool _isLoading = true;
 
@@ -33,6 +34,9 @@ class _MassagerHomePageState extends State<MassagerHomePage>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadBookings();
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -47,6 +51,8 @@ class _MassagerHomePageState extends State<MassagerHomePage>
     try {
       final bookingsData =
           await LocalDatabase.getBookingsByTherapistCode(widget.therapistCode);
+      final customerVisits =
+          await LocalDatabase.getCustomerVisitsByTherapistCode(widget.therapistCode);
       final customerCount =
           await LocalDatabase.getCustomerCountByTherapistCode(widget.therapistCode);
 
@@ -96,13 +102,19 @@ class _MassagerHomePageState extends State<MassagerHomePage>
         }
       }
 
+      // Combine visits with booking stats
+      final allCustomerEmails = <String>{};
+      allCustomerEmails.addAll(customers.keys);
+      allCustomerEmails.addAll(customerVisits.map((v) => v['customerEmail'] as String));
+
       setState(() {
         _allBookings =
             bookingsData.map((data) => BookingModel.fromMap(data)).toList();
         _upcomingBookings = upcoming;
         _historyBookings = history;
         _customerStats = customers;
-        _customerCount = customerCount;
+        _customerVisits = customerVisits;
+        _customerCount = allCustomerEmails.length;
         _isLoading = false;
       });
     } catch (e) {
@@ -142,6 +154,62 @@ class _MassagerHomePageState extends State<MassagerHomePage>
         return Icons.pending;
       default:
         return Icons.info;
+    }
+  }
+
+  Future<void> _approveBooking(int bookingId) async {
+    try {
+      await LocalDatabase.updateBookingStatus(
+        bookingId: bookingId,
+        status: 'confirmed',
+      );
+      await _loadBookings();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking approved!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error approving booking: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectBooking(int bookingId) async {
+    try {
+      await LocalDatabase.updateBookingStatus(
+        bookingId: bookingId,
+        status: 'cancelled',
+      );
+      await _loadBookings();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Booking rejected'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error rejecting booking: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -185,14 +253,18 @@ class _MassagerHomePageState extends State<MassagerHomePage>
         ],
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
           tabs: [
             Tab(
               icon: const Icon(Icons.people),
-              text: 'Customers (${_customerCount})',
+              text: 'Customers ($_customerCount)',
             ),
             Tab(
-              icon: const Icon(Icons.upcoming),
-              text: 'Upcoming (${_upcomingBookings.length})',
+              icon: const Icon(Icons.event_available),
+              text: 'Bookings (${_upcomingBookings.length})',
             ),
             Tab(
               icon: const Icon(Icons.history),
@@ -203,26 +275,39 @@ class _MassagerHomePageState extends State<MassagerHomePage>
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
+          : TabBarView(
+              controller: _tabController,
               children: [
-                // Dashboard Header
-                Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.teal.shade400, Colors.teal.shade700],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          const CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.white,
-                            child: Icon(Icons.person, size: 50, color: Colors.teal),
-                          ),
+                _buildCustomersTab(),
+                _buildBookingsTab(),
+                _buildHistoryTab(),
+              ],
+            ),
+    );
+  }
+
+  // Tab 1: Customers List
+  Widget _buildCustomersTab() {
+    return Column(
+      children: [
+        // Dashboard Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.teal.shade400, Colors.teal.shade700],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Column(
+            children: [
+              const CircleAvatar(
+                radius: 40,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.person, size: 50, color: Colors.teal),
+              ),
                           const SizedBox(height: 12),
                           Text(
                             widget.therapistName,
@@ -338,30 +423,56 @@ class _MassagerHomePageState extends State<MassagerHomePage>
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // Tabs Content
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildCustomersList(),
-                          _buildBookingsList(_upcomingBookings, isUpcoming: true),
-                          _buildBookingsList(_historyBookings, isUpcoming: false),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Customers List
+        Expanded(child: _buildCustomersList()),
+      ],
     );
   }
 
+  // Tab 2: Active Bookings
+  Widget _buildBookingsTab() {
+    return _buildBookingsList(_upcomingBookings, isUpcoming: true);
+  }
+
+  // Tab 3: Booking History
+  Widget _buildHistoryTab() {
+    return _buildBookingsList(_historyBookings, isUpcoming: false);
+  }
+
   Widget _buildCustomersList() {
-    if (_customerStats.isEmpty) {
+    // Merge customers from bookings and visits
+    Map<String, dynamic> allCustomers = {};
+    
+    // Add customers from bookings (have full stats)
+    allCustomers.addAll(_customerStats);
+    
+    // Add customers from visits who haven't booked yet
+    for (var visit in _customerVisits) {
+      final email = visit['customerEmail'] as String;
+      if (!allCustomers.containsKey(email)) {
+        allCustomers[email] = {
+          'name': visit['customerName'],
+          'email': email,
+          'bookingCount': 0,
+          'totalSpent': 0.0,
+          'lastBooking': DateTime.parse(visit['lastVisit'] as String),
+          'visitCount': visit['visitCount'],
+          'firstVisit': DateTime.parse(visit['firstVisit'] as String),
+          'isVisitOnly': true,
+        };
+      } else {
+        // Add visit data to existing customer
+        allCustomers[email]!['visitCount'] = visit['visitCount'];
+        allCustomers[email]!['firstVisit'] = DateTime.parse(visit['firstVisit'] as String);
+      }
+    }
+    
+    if (allCustomers.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(40.0),
@@ -396,9 +507,18 @@ class _MassagerHomePageState extends State<MassagerHomePage>
       );
     }
 
-    final customerList = _customerStats.values.toList();
-    customerList.sort((a, b) =>
-        (b['bookingCount'] as int).compareTo(a['bookingCount'] as int));
+    final customerList = allCustomers.values.toList();
+    // Sort by booking count first, then by visit count
+    customerList.sort((a, b) {
+      final aBookings = a['bookingCount'] as int;
+      final bBookings = b['bookingCount'] as int;
+      if (aBookings != bBookings) {
+        return bBookings.compareTo(aBookings);
+      }
+      final aVisits = (a['visitCount'] as int?) ?? 0;
+      final bVisits = (b['visitCount'] as int?) ?? 0;
+      return bVisits.compareTo(aVisits);
+    });
 
     return RefreshIndicator(
       onRefresh: _loadBookings,
@@ -407,71 +527,251 @@ class _MassagerHomePageState extends State<MassagerHomePage>
         itemCount: customerList.length,
         itemBuilder: (context, index) {
           final customer = customerList[index];
+          final isTopCustomer = index < 3 && (customer['bookingCount'] as int) > 0;
+          final isVisitOnly = customer['isVisitOnly'] == true;
+          
           return Card(
-            elevation: 2,
+            elevation: isTopCustomer ? 4 : 2,
             margin: const EdgeInsets.only(bottom: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
+              side: isTopCustomer 
+                ? BorderSide(color: Colors.amber.shade300, width: 2)
+                : BorderSide.none,
             ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              leading: CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.teal.shade100,
-                child: Text(
-                  (customer['name'] as String).substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.teal.shade700,
-                  ),
-                ),
-              ),
-              title: Text(
-                customer['name'] as String,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text(
-                    customer['email'] as String,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
+            child: Container(
+              decoration: isTopCustomer 
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.amber.shade50,
+                        Colors.white,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.event, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${customer['bookingCount']} bookings',
-                        style: const TextStyle(fontSize: 13),
+                  )
+                : null,
+              child: ListTile(
+                contentPadding: const EdgeInsets.all(16),
+                leading: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.teal.shade100,
+                      child: Text(
+                        (customer['name'] as String).substring(0, 1).toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.teal.shade700,
+                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Icon(Icons.attach_money, size: 16, color: Colors.grey[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        '\$${(customer['totalSpent'] as double).toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Last: ${DateFormat('MMM d, yyyy').format(customer['lastBooking'] as DateTime)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
                     ),
-                  ),
-                ],
+                    if (isTopCustomer)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade400,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.star,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                title: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        customer['name'] as String,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (isTopCustomer)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade400,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'TOP ${index + 1}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.email, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            customer['email'] as String,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (!isVisitOnly) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.event, size: 14, color: Colors.blue.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${customer['bookingCount']} bookings',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.attach_money, size: 14, color: Colors.green.shade700),
+                                Text(
+                                  '${(customer['totalSpent'] as double).toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ] else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade300),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.visibility, size: 14, color: Colors.orange.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Viewed services',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (customer['visitCount'] != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.remove_red_eye, size: 14, color: Colors.purple.shade700),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${customer['visitCount']} visits',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.purple.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Icon(
+                          isVisitOnly ? Icons.visibility : Icons.schedule,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isVisitOnly
+                              ? 'Last visit: ${DateFormat('MMM d, yyyy').format(customer['lastBooking'] as DateTime)}'
+                              : 'Last booking: ${DateFormat('MMM d, yyyy').format(customer['lastBooking'] as DateTime)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -674,6 +974,38 @@ class _MassagerHomePageState extends State<MassagerHomePage>
                       ),
                     ],
                   ),
+                  if (booking.status.toLowerCase() == 'pending') ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _approveBooking(int.parse(booking.id!)),
+                            icon: const Icon(Icons.check_circle),
+                            label: const Text('Approve'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () => _rejectBooking(int.parse(booking.id!)),
+                            icon: const Icon(Icons.cancel),
+                            label: const Text('Reject'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

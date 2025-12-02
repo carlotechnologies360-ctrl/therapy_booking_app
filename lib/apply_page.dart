@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:math';
 import 'firestore_service.dart';
-import 'local_database.dart';
-import 'massager/provider_setup_page.dart';
 
 class ApplyPage extends StatefulWidget {
   final String? providerEmail;
@@ -49,61 +46,46 @@ class _ApplyPageState extends State<ApplyPage> {
     }
   }
 
-  String _generateCode() {
-    final random = Random();
-    return List.generate(6, (_) => random.nextInt(10)).join();
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
 
     try {
-      // Try to save application to Firestore (may fail if Firebase not enabled)
-      try {
-        await FirestoreService.submitApplication(
-          name: _nameCtrl.text.trim(),
-          email: _emailCtrl.text.trim(),
-          phone: _phoneCtrl.text.trim(),
-          experience: _experienceCtrl.text.trim(),
-          location: _locationCtrl.text.trim(),
-        );
-      } catch (e) {
-        // Ignore Firebase errors for now
-        print('Firebase error (ignored for testing): $e');
-      }
-
-      // TEMPORARY: Generate a code and update local database for testing
-      final tempCode = _generateCode();
-      final db = await LocalDatabase.database;
-      await db.update(
-        'massagers',
-        {'code': tempCode},
-        where: 'email = ?',
-        whereArgs: [_emailCtrl.text.trim()],
+      // Submit application to Firestore
+      await FirestoreService.submitApplication(
+        name: _nameCtrl.text.trim(),
+        email: _emailCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(),
+        experience: _experienceCtrl.text.trim(),
+        location: _locationCtrl.text.trim(),
       );
 
       if (!mounted) return;
 
-      // Navigate directly to setup page for testing
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ProviderSetupPage(
-            providerEmail: _emailCtrl.text.trim(),
-            providerName: _nameCtrl.text.trim(),
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Application submitted successfully!\n'
+            'You will receive a code via email once approved by admin.',
           ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 5),
         ),
       );
+
+      // Navigate back to home
+      Navigator.pop(context);
 
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error: $e"),
+          content: Text("Failed to submit application: $e"),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     } finally {

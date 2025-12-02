@@ -63,6 +63,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1001807286020',
     projectId: 'massagebookingapp-5a234',
     storageBucket: 'massagebookingapp-5a234.firebasestorage.app',
+    databaseURL: 'https://massagebookingapp-5a234.firebaseio.com',
   );
 
   // iOS configuration

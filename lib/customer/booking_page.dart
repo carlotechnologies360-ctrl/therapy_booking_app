@@ -91,7 +91,7 @@ class _BookingPageState extends State<BookingPage> {
       totalPrice: cart.totalPrice,
       totalDuration: cart.totalDuration,
       createdAt: DateTime.now(),
-      status: 'confirmed',
+      status: 'pending',
     );
 
     // Save to database
