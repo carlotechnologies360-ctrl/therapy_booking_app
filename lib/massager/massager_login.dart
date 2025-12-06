@@ -46,13 +46,11 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('massager_email');
-    final savedPassword = prefs.getString('massager_password');
     final rememberMe = prefs.getBool('massager_remember_me') ?? false;
 
-    if (rememberMe && savedEmail != null && savedPassword != null) {
+    if (rememberMe && savedEmail != null) {
       setState(() {
         _emailCtrl.text = savedEmail;
-        _passwordCtrl.text = savedPassword;
         _rememberMe = true;
       });
       // Check for notifications after loading credentials
@@ -64,11 +62,9 @@ class _MassagerLoginPageState extends State<MassagerLoginPage> {
     final prefs = await SharedPreferences.getInstance();
     if (_rememberMe) {
       await prefs.setString('massager_email', _emailCtrl.text.trim());
-      await prefs.setString('massager_password', _passwordCtrl.text.trim());
       await prefs.setBool('massager_remember_me', true);
     } else {
       await prefs.remove('massager_email');
-      await prefs.remove('massager_password');
       await prefs.setBool('massager_remember_me', false);
     }
   }

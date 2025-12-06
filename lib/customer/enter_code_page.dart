@@ -78,7 +78,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
   Future<void> _submit() async {
     if (_codeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a therapist code")),
+        const SnackBar(content: Text("Please enter a service provider code")),
       );
       return;
     }
@@ -100,7 +100,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Invalid therapist code. Please check and try again."),
+            content: Text("Invalid service provider code. Please check and try again."),
             backgroundColor: Colors.red,
           ),
         );
@@ -114,15 +114,15 @@ class _EnterCodePageState extends State<EnterCodePage> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("This therapist hasn't completed their setup yet."),
+            content: Text("This service provider hasn't completed their setup yet."),
             backgroundColor: Colors.orange,
           ),
         );
         return;
       }
 
-      // Get therapist info
-      final therapistName = therapistData['name'] as String? ?? 'Therapist';
+      // Get service provider info
+      final therapistName = therapistData['name'] as String? ?? 'Service Provider';
       final therapistEmail = therapistData['email'] as String? ?? '';
       final therapistPhone = therapistData['phone'] as String? ?? '';
       final therapistExperience = therapistData['experience'] as String? ?? '';
@@ -133,6 +133,10 @@ class _EnterCodePageState extends State<EnterCodePage> {
 
       // Get customer details from local database
       final prefs = await SharedPreferences.getInstance();
+      
+      // Save this as the customer's default therapist code for future logins
+      await prefs.setString('customer_therapist_code', enteredCode);
+      
       final customerEmail = prefs.getString('customer_email') ?? '';
       final customerData = await LocalDatabase.findByEmail('customers', customerEmail);
       final customerName = customerData?['name'] as String? ?? 'Customer';
@@ -186,7 +190,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Find Your Therapist"),
+        title: const Text("Find Your Service Provider"),
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -214,7 +218,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
                   child: Column(
                     children: [
                       const Text(
-                        'Enter Therapist Code',
+                        'Enter Service Provider Code',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -223,7 +227,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Get the code from your therapist to continue',
+                        'Get the code from your service provider to continue',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -256,8 +260,8 @@ class _EnterCodePageState extends State<EnterCodePage> {
                             letterSpacing: 2,
                           ),
                           decoration: InputDecoration(
-                            labelText: "Therapist Code",
-                            hintText: "THERAPIST_XXXXXX",
+                            labelText: "Service Provider Code",
+                            hintText: "PROVIDER_XXXXXX",
                             prefixIcon: Icon(Icons.key, color: Colors.teal.shade600),
                             suffixIcon: _codeController.text.isNotEmpty
                                 ? IconButton(
@@ -371,7 +375,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
                 if (_recentCodes.isNotEmpty) ...[
                   const SizedBox(height: 32),
                   Text(
-                    'Recent Therapists',
+                    'Recent Service Providers',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -448,7 +452,7 @@ class _EnterCodePageState extends State<EnterCodePage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Ask your therapist for their unique code to view their services and book appointments',
+                          'Ask your service provider for their unique code to view their services and book appointments',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.blue.shade900,

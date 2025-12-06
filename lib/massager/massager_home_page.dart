@@ -859,6 +859,36 @@ class _MassagerHomePageState extends State<MassagerHomePage>
                                 color: Colors.grey[600],
                               ),
                             ),
+                            // Show referral badge if customer was referred
+                            FutureBuilder<Map<String, dynamic>?>(
+                              future: LocalDatabase.getReferralInfo(booking.customerEmail),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData && snapshot.data != null) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.people,
+                                          size: 14,
+                                          color: Colors.green.shade600,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'Referred customer',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.green.shade600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
                           ],
                         ),
                       ),

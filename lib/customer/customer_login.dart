@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../firebase_service.dart';
+import '../local_database.dart';
 import 'customer_signup.dart';
 import 'package:therapy_booking_app/customer/enter_code_page.dart';
+import 'package:therapy_booking_app/customer/customer_home_page.dart';
+import '../providers/session_provider.dart';
 
 class CustomerLoginPage extends StatefulWidget {
   const CustomerLoginPage({super.key});
@@ -29,13 +33,11 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
   Future<void> _loadSavedCredentials() async {
     final prefs = await SharedPreferences.getInstance();
     final savedEmail = prefs.getString('customer_email');
-    final savedPassword = prefs.getString('customer_password');
     final rememberMe = prefs.getBool('customer_remember_me') ?? false;
 
-    if (rememberMe && savedEmail != null && savedPassword != null) {
+    if (rememberMe && savedEmail != null) {
       setState(() {
         _emailCtrl.text = savedEmail;
-        _passwordCtrl.text = savedPassword;
         _rememberMe = true;
       });
     }
@@ -45,11 +47,9 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
     final prefs = await SharedPreferences.getInstance();
     if (_rememberMe) {
       await prefs.setString('customer_email', _emailCtrl.text.trim());
-      await prefs.setString('customer_password', _passwordCtrl.text.trim());
       await prefs.setBool('customer_remember_me', true);
     } else {
       await prefs.remove('customer_email');
-      await prefs.remove('customer_password');
       await prefs.setBool('customer_remember_me', false);
     }
   }
@@ -64,6 +64,64 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
         password: _passwordCtrl.text.trim(),
       );
       await _saveCredentials();
+      if (!mounted) return;
+      
+      // Check if customer has a saved therapist code from previous login
+      final prefs = await SharedPreferences.getInstance();
+      final savedTherapistCode = prefs.getString('customer_therapist_code');
+      
+      if (savedTherapistCode != null && savedTherapistCode.isNotEmpty) {
+        // Verify the therapist code is still valid
+        try {
+          final therapistData = await LocalDatabase.findByCode(
+            'massagers',
+            savedTherapistCode,
+          );
+          
+          if (therapistData != null && (therapistData['setupComplete'] as int?) == 1) {
+            // Valid service provider code found - go directly to customer home page
+            final therapistName = therapistData['name'] as String? ?? 'Service Provider';
+            final therapistEmail = therapistData['email'] as String? ?? '';
+            final therapistPhone = therapistData['phone'] as String? ?? '';
+            final therapistExperience = therapistData['experience'] as String? ?? '';
+            final therapistLocation = therapistData['location'] as String? ?? '';
+            
+            // Record customer visit
+            final customerEmail = _emailCtrl.text.trim();
+            final customerData = await LocalDatabase.findByEmail('customers', customerEmail);
+            final customerName = customerData?['name'] as String? ?? 'Customer';
+            
+            await LocalDatabase.recordCustomerVisit(
+              therapistCode: savedTherapistCode,
+              customerEmail: customerEmail,
+              customerName: customerName,
+            );
+            
+            // Store therapist code in session
+            if (!mounted) return;
+            Provider.of<SessionProvider>(context, listen: false)
+                .setTherapistCode(savedTherapistCode);
+            
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CustomerHomePage(
+                  therapistCode: savedTherapistCode,
+                  therapistName: therapistName,
+                  therapistBio: '$therapistExperience years of experience in therapeutic massage',
+                  therapistContact: '$therapistEmail | $therapistPhone | $therapistLocation',
+                ),
+              ),
+            );
+            return;
+          }
+        } catch (e) {
+          // If verification fails, clear the saved code and continue to code entry
+          await prefs.remove('customer_therapist_code');
+        }
+      }
+      
+      // No saved code or invalid code - go to code entry page
       if (!mounted) return;
       Navigator.pushReplacement(
         context,

@@ -95,8 +95,16 @@ class _BookingPageState extends State<BookingPage> {
     );
 
     // Save to database
+    int bookingId;
     try {
-      await LocalDatabase.insert('bookings', booking.toMap());
+      bookingId = await LocalDatabase.insert('bookings', booking.toMap());
+      
+      // Award referral points if customer was referred
+      await LocalDatabase.awardReferralPoints(
+        customerEmail: customerEmail,
+        bookingId: bookingId,
+        bookingAmount: cart.totalPrice,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

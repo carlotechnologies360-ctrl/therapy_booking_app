@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/service_model.dart';
 import '../providers/cart_provider.dart';
 import '../local_database.dart';
+import 'enter_code_page.dart';
 
 class CustomerHomePage extends StatefulWidget {
   final String therapistCode;
@@ -12,10 +14,10 @@ class CustomerHomePage extends StatefulWidget {
 
   const CustomerHomePage({
     super.key,
-    this.therapistCode = "THERAPIST123",
+    this.therapistCode = "PROVIDER123",
     this.therapistName = "Dr. Sarah Johnson",
-    this.therapistBio = "Licensed massage therapist with 10+ years of experience specializing in therapeutic and relaxation massage.",
-    this.therapistContact = "contact@therapist.com | (555) 123-4567",
+    this.therapistBio = "Licensed massage service provider with 10+ years of experience specializing in therapeutic and relaxation massage.",
+    this.therapistContact = "contact@provider.com | (555) 123-4567",
   });
 
   @override
@@ -48,7 +50,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
       if (therapistData == null) {
         setState(() {
-          _errorMessage = 'Therapist not found';
+          _errorMessage = 'Service Provider not found';
           _isLoading = false;
         });
         return;
@@ -91,8 +93,40 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Therapist Services"),
+        title: const Text("Service Provider Services"),
         actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) async {
+              if (value == 'change_therapist') {
+                _showChangeTherapistDialog();
+              } else if (value == 'referrals') {
+                Navigator.pushNamed(context, '/referrals');
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'change_therapist',
+                child: Row(
+                  children: [
+                    Icon(Icons.switch_account, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Text('Change Service Provider'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'referrals',
+                child: Row(
+                  children: [
+                    Icon(Icons.card_giftcard, color: Colors.amber),
+                    SizedBox(width: 8),
+                    Text('Refer & Earn'),
+                  ],
+                ),
+              ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'My Bookings',
@@ -250,7 +284,7 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'This therapist hasn\'t added any services',
+                      'This service provider hasn\'t added any services',
                       style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                     ),
                   ],
@@ -382,6 +416,54 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
               backgroundColor: Colors.teal,
             )
           : null,
+    );
+  }
+
+  void _showChangeTherapistDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.switch_account, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Change Therapist'),
+            ],
+          ),
+          content: const Text(
+            'Do you want to change your service provider? You will be redirected to enter a new provider code.',
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Clear the saved therapist code
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('customer_therapist_code');
+                
+                if (!mounted) return;
+                Navigator.pop(context); // Close dialog
+                
+                // Navigate to enter code page
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EnterCodePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Change'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
