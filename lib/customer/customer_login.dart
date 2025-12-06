@@ -45,11 +45,11 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
 
   Future<void> _saveCredentials() async {
     final prefs = await SharedPreferences.getInstance();
+    // Always store email for current session so first-login code entry works
+    await prefs.setString('customer_email', _emailCtrl.text.trim());
     if (_rememberMe) {
-      await prefs.setString('customer_email', _emailCtrl.text.trim());
       await prefs.setBool('customer_remember_me', true);
     } else {
-      await prefs.remove('customer_email');
       await prefs.setBool('customer_remember_me', false);
     }
   }
@@ -66,9 +66,10 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
       await _saveCredentials();
       if (!mounted) return;
       
-      // Check if customer has a saved therapist code from previous login
+      // Check if this specific customer has a saved therapist code
       final prefs = await SharedPreferences.getInstance();
-      final savedTherapistCode = prefs.getString('customer_therapist_code');
+      final currentEmail = _emailCtrl.text.trim();
+      final savedTherapistCode = prefs.getString('customer_therapist_code_$currentEmail');
       
       if (savedTherapistCode != null && savedTherapistCode.isNotEmpty) {
         // Verify the therapist code is still valid
@@ -117,7 +118,7 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
           }
         } catch (e) {
           // If verification fails, clear the saved code and continue to code entry
-          await prefs.remove('customer_therapist_code');
+            await prefs.remove('customer_therapist_code_$currentEmail');
         }
       }
       

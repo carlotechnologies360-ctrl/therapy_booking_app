@@ -133,20 +133,23 @@ class _EnterCodePageState extends State<EnterCodePage> {
 
       // Get customer details from local database
       final prefs = await SharedPreferences.getInstance();
-      
-      // Save this as the customer's default therapist code for future logins
-      await prefs.setString('customer_therapist_code', enteredCode);
-      
       final customerEmail = prefs.getString('customer_email') ?? '';
-      final customerData = await LocalDatabase.findByEmail('customers', customerEmail);
-      final customerName = customerData?['name'] as String? ?? 'Customer';
-
-      // Record customer visit
-      await LocalDatabase.recordCustomerVisit(
-        therapistCode: enteredCode,
-        customerEmail: customerEmail,
-        customerName: customerName,
-      );
+      
+      // Save this as the customer's default therapist code for future logins (per customer)
+      if (customerEmail.isNotEmpty) {
+        await prefs.setString('customer_therapist_code_$customerEmail', enteredCode);
+      }
+      String customerName = 'Customer';
+      if (customerEmail.isNotEmpty) {
+        final customerData = await LocalDatabase.findByEmail('customers', customerEmail);
+        customerName = customerData?['name'] as String? ?? customerName;
+        // Record customer visit only if we have an email
+        await LocalDatabase.recordCustomerVisit(
+          therapistCode: enteredCode,
+          customerEmail: customerEmail,
+          customerName: customerName,
+        );
+      }
 
       // Store therapist code in session
       if (!mounted) return;

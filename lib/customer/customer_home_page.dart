@@ -98,24 +98,12 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             onSelected: (value) async {
-              if (value == 'change_therapist') {
-                _showChangeTherapistDialog();
-              } else if (value == 'referrals') {
+              if (value == 'referrals') {
                 Navigator.pushNamed(context, '/referrals');
               }
             },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'change_therapist',
-                child: Row(
-                  children: [
-                    Icon(Icons.switch_account, color: Colors.orange),
-                    SizedBox(width: 8),
-                    Text('Change Service Provider'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
+            itemBuilder: (BuildContext context) => const [
+              PopupMenuItem<String>(
                 value: 'referrals',
                 child: Row(
                   children: [

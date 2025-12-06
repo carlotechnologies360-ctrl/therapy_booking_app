@@ -54,7 +54,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 7,   // increase version when schema changes
+      version: 8,   // increase version when schema changes
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
     );
@@ -62,6 +62,14 @@ class LocalDatabase {
 
   // Handle database upgrades
   static Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // Ensure customers table has referral_code for all prior versions
+    if (oldVersion < 8) {
+      try {
+        await db.execute('ALTER TABLE customers ADD COLUMN referral_code TEXT');
+      } catch (e) {
+        // Ignore if column already exists
+      }
+    }
     if (oldVersion < 3) {
       await db.execute('''
         CREATE TABLE IF NOT EXISTS bookings (
@@ -184,7 +192,8 @@ class LocalDatabase {
         phone TEXT,
         email TEXT,
         password TEXT,
-        assigned_code TEXT
+        assigned_code TEXT,
+        referral_code TEXT
       )
     ''');
 
@@ -682,14 +691,14 @@ class LocalDatabase {
   }
 
   // Initialize loyalty points account for a customer
-  static Future<int> initializeLoyaltyAccount(String customerEmail) async {
+  static Future<int> initializeLoyaltyAccount(String customerEmail, {String? referralCode}) async {
     if (!_isValidEmail(customerEmail)) {
       throw ArgumentError('Invalid email format');
     }
     
     final db = await database;
     final sanitizedEmail = _sanitizeInput(customerEmail);
-    final referralCode = generateReferralCode(sanitizedEmail);
+    final code = referralCode ?? generateReferralCode(sanitizedEmail);
     
     // Check if account already exists
     final existing = await db.query(
@@ -706,7 +715,7 @@ class LocalDatabase {
       'customer_email': sanitizedEmail,
       'points': 0,
       'lifetime_points': 0,
-      'referral_code': referralCode,
+      'referral_code': code,
       'last_updated': DateTime.now().toIso8601String(),
     });
   }

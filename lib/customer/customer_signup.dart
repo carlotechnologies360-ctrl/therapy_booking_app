@@ -35,18 +35,22 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
         phone: _phoneCtrl.text.trim(),
       );
 
-      // 2️⃣ Save the user in LOCAL SQLite DB
+      // 2️⃣ Generate unique referral code for this customer
+      final referralCode = LocalDatabase.generateReferralCode(_emailCtrl.text.trim());
+
+      // 3️⃣ Save the user in LOCAL SQLite DB
       await LocalDatabase.insert('customers', {
         'name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'password': _passwordCtrl.text.trim(),
+        'referral_code': referralCode,
       });
 
-      // 3️⃣ Initialize loyalty points account
-      await LocalDatabase.initializeLoyaltyAccount(_emailCtrl.text.trim());
+      // 4️⃣ Initialize loyalty points account with referral code
+      await LocalDatabase.initializeLoyaltyAccount(_emailCtrl.text.trim(), referralCode: referralCode);
 
-      // 4️⃣ Process referral code if provided
+      // 5️⃣ Process referral code if provided
       if (_referralCodeCtrl.text.trim().isNotEmpty) {
         try {
           await LocalDatabase.saveReferral(
