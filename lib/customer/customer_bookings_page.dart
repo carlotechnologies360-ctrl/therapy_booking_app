@@ -312,7 +312,7 @@ class _CustomerBookingsPageState extends State<CustomerBookingsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Therapist Code',
+                      'Provider Code',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey[600],

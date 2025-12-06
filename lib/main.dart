@@ -15,6 +15,7 @@ import 'customer/customer_home_page.dart';
 import 'customer/cart_page.dart';
 import 'customer/booking_page.dart';
 import 'customer/customer_bookings_page.dart';
+import 'customer/referral_page.dart';
 import 'providers/cart_provider.dart';
 import 'providers/session_provider.dart';
 
@@ -58,6 +59,7 @@ class MyApp extends StatelessWidget {
           '/cart': (context) => const CartPage(),
           '/booking': (context) => const BookingPage(),
           '/customer_bookings': (context) => const CustomerBookingsPage(),
+          '/referrals': (context) => const ReferralPage(),
           '/massager_enter_code': (context) => const MassagerEnterCodePage(),
           '/massager_home': (context) => const MassagerHomePage(therapistCode: 'THERAPIST123'),
         },

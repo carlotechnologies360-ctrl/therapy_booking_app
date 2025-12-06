@@ -17,6 +17,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _referralCodeCtrl = TextEditingController();
 
   bool _loading = false;
 
@@ -42,6 +43,29 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
         'password': _passwordCtrl.text.trim(),
       });
 
+      // 3️⃣ Initialize loyalty points account
+      await LocalDatabase.initializeLoyaltyAccount(_emailCtrl.text.trim());
+
+      // 4️⃣ Process referral code if provided
+      if (_referralCodeCtrl.text.trim().isNotEmpty) {
+        try {
+          await LocalDatabase.saveReferral(
+            referralCode: _referralCodeCtrl.text.trim(),
+            referredEmail: _emailCtrl.text.trim(),
+          );
+        } catch (e) {
+          // Referral code invalid or already used, but don't block signup
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Note: $e'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Customer registered successfully')),
@@ -63,6 +87,7 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _referralCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -198,9 +223,58 @@ class _CustomerSignupPageState extends State<CustomerSignupPage> {
                           ),
                           obscureText: true,
                           validator: (v) =>
-                              (v?.length ?? 0) >= 6 ? null : 'Min 6 chars',
+                              v != null && v.length >= 6 ? null : 'Min 6 chars',
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _referralCodeCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Referral Code (Optional)',
+                            hintText: 'Enter friend\'s referral code',
+                            prefixIcon: const Icon(Icons.card_giftcard),
+                            suffixIcon: Tooltip(
+                              message: 'Get 25 bonus points!',
+                              child: Icon(Icons.info_outline, color: Colors.amber.shade700),
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.amber.shade600, width: 2),
+                            ),
+                          ),
+                          textCapitalization: TextCapitalization.characters,
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.stars, color: Colors.amber.shade700, size: 16),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Use a referral code to get 25 welcome points!',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.amber.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
                           height: 50,
